@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   Phone, 
@@ -29,7 +30,9 @@ import {
   FilterX,
   UserPlus,
   Trash2,
-  Save
+  Save,
+  Download,
+  Upload
 } from 'lucide-react';
 
 // --- Types ---
@@ -108,6 +111,8 @@ const initialEngineers: Engineer[] = NAMES.map((name, i) => ({
 }));
 
 const SupportHotlineDemo: React.FC = () => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   // --- State with LocalStorage initialization ---
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(STORAGE_KEYS.THEME) === 'true');
   const [engineers, setEngineers] = useState<Engineer[]>(() => {
@@ -194,6 +199,7 @@ const SupportHotlineDemo: React.FC = () => {
     return (engineersWithCounts.reduce((acc, curr) => acc + curr.shiftCount, 0) / engineersWithCounts.length).toFixed(1);
   }, [engineersWithCounts]);
 
+  // --- Handlers ---
   const adjustWeek = (weeks: number) => {
     const newDate = new Date(simulatedDate);
     newDate.setDate(newDate.getDate() + weeks * 7);
@@ -249,6 +255,94 @@ const SupportHotlineDemo: React.FC = () => {
     }
   };
 
+  // --- CSV Export/Import ---
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Section: Engineers
+    csvContent += "[ENGINEERS]\n";
+    csvContent += "ID,Name,Department,Phone,AvatarColor,Available\n";
+    engineers.forEach(e => {
+      csvContent += `${e.id},"${e.name}","${e.department}","${e.phone}","${e.avatarColor}",${e.isAvailable}\n`;
+    });
+    
+    csvContent += "\n";
+    
+    // Section: Schedules
+    csvContent += "[SCHEDULES]\n";
+    csvContent += "WeekNumber,Year,EngineerID\n";
+    schedules.forEach(s => {
+      csvContent += `${s.weekNumber},${s.year},${s.engineerId || ""}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `support_hotline_data_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split("\n");
+      
+      const newEngineers: Engineer[] = [];
+      const newSchedules: Schedule[] = [];
+      let currentSection = "";
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        
+        if (trimmed === "[ENGINEERS]") {
+          currentSection = "engineers";
+          return;
+        }
+        if (trimmed === "[SCHEDULES]") {
+          currentSection = "schedules";
+          return;
+        }
+
+        const cols = trimmed.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, ''));
+        
+        if (currentSection === "engineers" && cols[0] !== "ID") {
+          newEngineers.push({
+            id: Number(cols[0]),
+            name: cols[1],
+            department: cols[2],
+            phone: cols[3],
+            avatarColor: cols[4],
+            isAvailable: cols[5] === "true",
+            shiftCount: 0
+          });
+        } else if (currentSection === "schedules" && cols[0] !== "WeekNumber") {
+          newSchedules.push({
+            weekNumber: Number(cols[0]),
+            year: Number(cols[1]),
+            engineerId: cols[2] ? Number(cols[2]) : null
+          });
+        }
+      });
+
+      if (newEngineers.length > 0) {
+        setEngineers(newEngineers);
+        setSchedules(newSchedules);
+        alert(`Erfolgreich importiert: ${newEngineers.length} Personen und ${newSchedules.length} Dienstplan-Einträge.`);
+      } else {
+        alert("Keine gültigen Daten in der Datei gefunden.");
+      }
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const getShiftColor = (count: number) => {
     if (count <= 1) return "bg-red-100 text-red-700 border-red-200";
     if (count <= 3) return "bg-amber-100 text-amber-700 border-amber-200";
@@ -293,7 +387,18 @@ const SupportHotlineDemo: React.FC = () => {
           <button onClick={() => setSimulatedDate(new Date())} className="ml-1 p-1.5 hover:bg-white/20 rounded-lg text-white/50 hover:text-white"><RotateCcw className="w-4 h-4" /></button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
+          {/* Data Actions */}
+          <div className="flex items-center border-r border-white/20 pr-1 sm:pr-2 mr-1 sm:mr-2">
+            <button onClick={handleExportCSV} title="Export als CSV" className="p-2 hover:bg-white/10 rounded-full transition-colors">
+              <Download className="w-5 h-5" />
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} title="Import von CSV" className="p-2 hover:bg-white/10 rounded-full transition-colors">
+              <Upload className="w-5 h-5" />
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleImportCSV} accept=".csv" className="hidden" />
+          </div>
+
           <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
             {isDarkMode ? <LightMode className="w-5 h-5" /> : <DarkMode className="w-5 h-5" />}
           </button>

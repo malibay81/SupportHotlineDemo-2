@@ -5,7 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Service-Hotline Bereitschafts-Dashboard</title>
+    
+    <!-- Scripts für Styling und Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel für In-Browser Transpilation (Wichtig für GitHub Pages ohne Build-Step) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <script type="importmap">
 {
   "imports": {
@@ -19,16 +25,25 @@
   }
 }
 </script>
+
+    <script>
+      // Shim für Bibliotheken, die 'process.env' erwarten
+      window.process = { 
+        env: { 
+          NODE_ENV: 'production'
+        } 
+      };
+    </script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         body {
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
-            overflow: hidden; /* Prevent body scroll entirely */
+            overflow: hidden;
         }
         
-        /* Custom scrollbar for better aesthetics */
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
           height: 6px;
@@ -53,6 +68,15 @@
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
+    <!-- 
+      Wir nutzen data-type="module", damit Babel die Datei als ES-Modul behandelt 
+      und data-presets="typescript,react", um TSX zu unterstützen.
+    -->
+    <script 
+      type="text/babel" 
+      data-type="module" 
+      data-presets="typescript,react" 
+      src="index.tsx">
+    </script>
 </body>
 </html>

@@ -41,7 +41,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
-            overflow: hidden;
+            /* overflow: hidden entfernt für Mobile-Scrolling */
         }
         
         .custom-scrollbar::-webkit-scrollbar {
@@ -68,10 +68,6 @@
 </head>
 <body>
     <div id="root"></div>
-    <!-- 
-      Wir nutzen data-type="module", damit Babel die Datei als ES-Modul behandelt 
-      und data-presets="typescript,react", um TSX zu unterstützen.
-    -->
     <script 
       type="text/babel" 
       data-type="module" 
